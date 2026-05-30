@@ -461,7 +461,6 @@
     }
     .field textarea { resize: vertical; min-height: 70px; font-family: 'Manrope', sans-serif; }
     .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .field-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
 
     .modal-actions {
       display: flex;
@@ -534,7 +533,7 @@
 
       .modal { padding: 22px; }
       .modal-title { font-size: 24px; }
-      .field-row, .field-row-3 { grid-template-columns: 1fr; }
+      .field-row { grid-template-columns: 1fr; }
     }
 
     /* View tabs */
@@ -631,6 +630,62 @@
       .weekly-stats { grid-template-columns: repeat(2, 1fr) !important; }
       .weekly-table th:nth-child(3), .weekly-table td:nth-child(3) { display: none; }
     }
+
+    /* Analytics view */
+    .analytics-view { padding: 24px; display: none; }
+    .analytics-view.visible { display: block; }
+    .analytics-header {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      margin-bottom: 24px; flex-wrap: wrap; gap: 12px;
+    }
+    .export-btn {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--accent); text-decoration: none;
+      padding: 10px 18px; border-radius: var(--radius);
+      font-family: 'JetBrains Mono', monospace; font-size: 12px;
+      letter-spacing: 0.05em; cursor: pointer;
+      transition: all 0.15s ease;
+      display: inline-flex; align-items: center; gap: 7px; white-space: nowrap;
+    }
+    .export-btn:hover { background: var(--accent-dim); border-color: var(--accent); }
+    .analytics-kpi-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 12px; margin-bottom: 14px;
+    }
+    .analytics-insight-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 12px; margin-bottom: 32px;
+    }
+    .insight-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px 18px;
+      border-left: 2px solid var(--accent);
+    }
+    .insight-icon {
+      font-family: 'JetBrains Mono', monospace; font-size: 10px;
+      letter-spacing: 0.15em; color: var(--accent); text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .insight-value {
+      font-family: 'Instrument Serif', serif; font-size: 21px;
+      line-height: 1.1; margin-bottom: 4px; letter-spacing: -0.01em;
+    }
+    .insight-sub {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      color: var(--text-dim);
+    }
+    .freq-bar-wrap {
+      width: 100%; height: 3px; background: var(--border);
+      border-radius: 2px; margin-top: 5px;
+    }
+    .freq-bar { height: 3px; background: var(--accent); border-radius: 2px; min-width: 2px; }
+    .margin-high { color: var(--success); }
+    .margin-mid  { color: var(--accent); }
+    .margin-low  { color: var(--danger); }
+    @media (max-width: 720px) {
+      .analytics-kpi-grid    { grid-template-columns: repeat(2, 1fr); }
+      .analytics-insight-grid{ grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
@@ -672,10 +727,14 @@
   <div class="view-tabs">
     <button class="view-tab active" id="tab-board" onclick="switchView('board')">&#9726; Board</button>
     <button class="view-tab" id="tab-weekly" onclick="switchView('weekly')">&#9661; Weekly</button>
+    <button class="view-tab" id="tab-analytics" onclick="switchView('analytics')">&#9650; Analytics</button>
   </div>
 
   <!-- Weekly breakdown (hidden by default) -->
   <div class="weekly-view" id="weekly-view"></div>
+
+  <!-- Analytics (hidden by default) -->
+  <div class="analytics-view" id="analytics-view"></div>
 
   <!-- Mobile-only column selector tabs -->
   <div class="col-tabs" id="col-tabs"></div>
@@ -709,11 +768,12 @@
           <select id="f-item">
             <option value="T-Shirt">T-Shirt</option>
             <option value="Hoodie">Hoodie</option>
+            <option value="Crew Neck">Crew Neck</option>
             <option value="Door">Door</option>
+            <option value="Wall">Wall</option>
             <option value="Sign">Sign</option>
             <option value="Mug">Mug</option>
-            <option value="Tote">Tote</option>
-            <option value="Sticker">Sticker</option>
+            <option value="Balloons">Balloons</option>
             <option value="Other">Other</option>
           </select>
         </div>
@@ -723,14 +783,10 @@
         </div>
       </div>
 
-      <div class="field-row-3">
+      <div class="field-row">
         <div class="field">
           <label for="f-material">Material cost ($)</label>
           <input type="number" id="f-material" min="0" step="0.01" value="0" />
-        </div>
-        <div class="field">
-          <label for="f-labor">Labor cost ($)</label>
-          <input type="number" id="f-labor" min="0" step="0.01" value="0" />
         </div>
         <div class="field">
           <label for="f-price">Sale price ($)</label>
@@ -987,7 +1043,6 @@
     document.getElementById('f-item').value = 'T-Shirt';
     document.getElementById('f-qty').value = 1;
     document.getElementById('f-material').value = 0;
-    document.getElementById('f-labor').value = 0;
     document.getElementById('f-price').value = 0;
     document.getElementById('f-due').value = '';
     document.getElementById('f-notes').value = '';
@@ -1009,7 +1064,6 @@
     document.getElementById('f-item').value = o.item_type;
     document.getElementById('f-qty').value = o.quantity;
     document.getElementById('f-material').value = o.material_cost;
-    document.getElementById('f-labor').value = o.labor_cost;
     document.getElementById('f-price').value = o.sale_price;
     document.getElementById('f-due').value = o.due_date || '';
     document.getElementById('f-notes').value = o.notes || '';
@@ -1029,7 +1083,7 @@
       item_type: document.getElementById('f-item').value,
       quantity: parseInt(document.getElementById('f-qty').value, 10),
       material_cost: parseFloat(document.getElementById('f-material').value) || 0,
-      labor_cost: parseFloat(document.getElementById('f-labor').value) || 0,
+      labor_cost: 0,
       sale_price: parseFloat(document.getElementById('f-price').value) || 0,
       due_date: document.getElementById('f-due').value || null,
       notes: document.getElementById('f-notes').value.trim() || null,
@@ -1058,31 +1112,37 @@
 
 
   // ============================================================
-  // View switching — Board / Weekly
+  // View switching — Board / Weekly / Analytics
   // ============================================================
   let currentView = 'board';
 
   function switchView(view) {
     currentView = view;
-    const board    = document.getElementById('board');
-    const colTabs  = document.getElementById('col-tabs');
-    const weekly   = document.getElementById('weekly-view');
-    const tabBoard  = document.getElementById('tab-board');
-    const tabWeekly = document.getElementById('tab-weekly');
+    const board     = document.getElementById('board');
+    const colTabs   = document.getElementById('col-tabs');
+    const weekly    = document.getElementById('weekly-view');
+    const analytics = document.getElementById('analytics-view');
+    const tabs = ['tab-board','tab-weekly','tab-analytics'];
+
+    // Reset everything
+    board.style.display   = 'none';
+    colTabs.style.display = 'none';
+    weekly.classList.remove('visible');
+    analytics.classList.remove('visible');
+    tabs.forEach(id => document.getElementById(id).classList.remove('active'));
 
     if (view === 'board') {
       board.style.display   = '';
       colTabs.style.display = '';
-      weekly.classList.remove('visible');
-      tabBoard.classList.add('active');
-      tabWeekly.classList.remove('active');
-    } else {
-      board.style.display   = 'none';
-      colTabs.style.display = 'none';
+      document.getElementById('tab-board').classList.add('active');
+    } else if (view === 'weekly') {
       weekly.classList.add('visible');
-      tabBoard.classList.remove('active');
-      tabWeekly.classList.add('active');
+      document.getElementById('tab-weekly').classList.add('active');
       renderWeekly();
+    } else if (view === 'analytics') {
+      analytics.classList.add('visible');
+      document.getElementById('tab-analytics').classList.add('active');
+      renderAnalytics();
     }
   }
 
@@ -1192,6 +1252,146 @@
         </table>
       </div>
     `;
+  }
+
+
+  // ============================================================
+  // Analytics tab renderer
+  // ============================================================
+  function marginClass(pct) {
+    const n = parseFloat(pct);
+    if (n >= 60) return 'margin-high';
+    if (n >= 40) return 'margin-mid';
+    return 'margin-low';
+  }
+
+  async function renderAnalytics() {
+    const el = document.getElementById('analytics-view');
+    el.innerHTML = '<div class="weekly-empty">Loading&hellip;</div>';
+
+    let data;
+    try { data = await api('/analytics'); }
+    catch (err) {
+      el.innerHTML = `<div class="weekly-empty" style="color:var(--danger)">Could not load: ${err.message}</div>`;
+      return;
+    }
+
+    const { kpi, by_item_type, monthly } = data;
+
+    // ── KPI Cards ──────────────────────────────────────────────────────
+    const kpiCards = `
+      <div class="analytics-kpi-grid">
+        <div class="stat">
+          <div class="stat-label">Completed Orders</div>
+          <div class="stat-value money">${kpi.total_completed_orders}</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Avg Revenue / Order</div>
+          <div class="stat-value money warn">${money(kpi.avg_revenue_per_order)}</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Avg Profit / Order</div>
+          <div class="stat-value money good">${money(kpi.avg_profit_per_order)}</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Overall Margin</div>
+          <div class="stat-value money good">${kpi.overall_margin_pct}%</div>
+        </div>
+      </div>
+      <div class="analytics-insight-grid">
+        <div class="insight-card">
+          <div class="insight-icon">&#9650; Best Margin Item</div>
+          <div class="insight-value">${kpi.best_margin_item || '&mdash;'}</div>
+          <div class="insight-sub">${kpi.best_margin_pct ? kpi.best_margin_pct + '% margin' : 'Complete orders to see data'}</div>
+        </div>
+        <div class="insight-card">
+          <div class="insight-icon">&#9632; Most Frequent Job</div>
+          <div class="insight-value">${kpi.most_frequent_item || '&mdash;'}</div>
+          <div class="insight-sub">${kpi.most_frequent_count ? kpi.most_frequent_count + ' completed jobs' : 'Complete orders to see data'}</div>
+        </div>
+        <div class="insight-card">
+          <div class="insight-icon">&#9733; Top Profit Driver</div>
+          <div class="insight-value">${kpi.top_profit_contributor || '&mdash;'}</div>
+          <div class="insight-sub">${kpi.top_profit_total ? money(kpi.top_profit_total) + ' total profit' : 'Complete orders to see data'}</div>
+        </div>
+      </div>`;
+
+    // ── By Item Type Table ─────────────────────────────────────────────
+    const maxFreq = Math.max(...by_item_type.map(r => r.frequency_pct), 1);
+    const itemRows = by_item_type.length ? by_item_type.map(r => {
+      const barW = ((r.frequency_pct / maxFreq) * 100).toFixed(0);
+      return `
+        <tr>
+          <td>
+            <span style="font-weight:500;color:var(--text)">${r.item_type}</span>
+            <div class="freq-bar-wrap"><div class="freq-bar" style="width:${barW}%"></div></div>
+          </td>
+          <td class="num-cell">${r.job_count}</td>
+          <td class="num-cell">${r.frequency_pct}%</td>
+          <td class="money-cell">${money(r.total_revenue)}</td>
+          <td class="money-cell pos">${money(r.avg_profit_per_job)}</td>
+          <td class="money-cell ${marginClass(r.margin_pct)}">${r.margin_pct}%</td>
+        </tr>`;
+    }).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--text-dim);padding:28px;font-style:italic">No completed orders yet</td></tr>';
+
+    // ── Monthly Table ──────────────────────────────────────────────────
+    const monthRows = monthly.length ? monthly.map(m => {
+      const hasRev = parseFloat(m.revenue) > 0;
+      return `
+        <tr>
+          <td style="font-weight:500;color:var(--text)">${m.month_label}</td>
+          <td class="num-cell">${m.jobs_created}</td>
+          <td class="num-cell">${m.jobs_completed}</td>
+          <td class="money-cell">${hasRev ? money(m.revenue) : '&mdash;'}</td>
+          <td class="money-cell ${hasRev ? 'pos' : ''}">${hasRev ? money(m.profit) : '&mdash;'}</td>
+          <td class="money-cell ${hasRev ? marginClass(m.margin_pct) : ''}">${hasRev ? m.margin_pct + '%' : '&mdash;'}</td>
+        </tr>`;
+    }).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--text-dim);padding:28px;font-style:italic">No data yet</td></tr>';
+
+    el.innerHTML = `
+      <div class="analytics-header">
+        <div>
+          <div class="weekly-section-title">Analytics</div>
+          <div class="weekly-dates-label">Completed orders &middot; All time</div>
+        </div>
+        <a href="/api/export" class="export-btn" download>&#8659;&nbsp; Export to CSV</a>
+      </div>
+
+      ${kpiCards}
+
+      <div class="history-label" style="margin-top:4px">By Item Type <span style="color:var(--text-dim);font-size:9px;letter-spacing:0.05em">&mdash; SORTED BY TOTAL PROFIT</span></div>
+      <div class="weekly-table-wrap" style="margin-bottom:32px">
+        <table class="weekly-table">
+          <thead>
+            <tr>
+              <th>Item Type + Frequency</th>
+              <th class="r">Jobs</th>
+              <th class="r">Of Total</th>
+              <th class="r">Revenue</th>
+              <th class="r">Avg Profit</th>
+              <th class="r">Margin</th>
+            </tr>
+          </thead>
+          <tbody>${itemRows}</tbody>
+        </table>
+      </div>
+
+      <div class="history-label">Monthly Breakdown</div>
+      <div class="weekly-table-wrap">
+        <table class="weekly-table">
+          <thead>
+            <tr>
+              <th>Month</th>
+              <th class="r">Orders In</th>
+              <th class="r">Completed</th>
+              <th class="r">Revenue</th>
+              <th class="r">Profit</th>
+              <th class="r">Margin</th>
+            </tr>
+          </thead>
+          <tbody>${monthRows}</tbody>
+        </table>
+      </div>`;
   }
 
   // Keyboard: Esc to close modal

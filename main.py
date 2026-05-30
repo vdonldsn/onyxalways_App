@@ -14,7 +14,10 @@ App UI:       http://localhost:8000/
 
 from __future__ import annotations
 
+import csv
+import io
 import os
+from collections import defaultdict
 from datetime import datetime, date, timedelta
 from decimal import Decimal
 from enum import Enum
@@ -23,7 +26,7 @@ from typing import Optional
 
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ConfigDict
 from sqlalchemy import (
@@ -475,7 +478,202 @@ def get_weekly(weeks: int = 8, db: Session = Depends(get_db)):
     return result
 
 
-# ----- Static frontend ------------------------------------------------------
+@app.get("/api/analytics")
+def get_analytics(db: Session = Depends(get_db)):
+    """
+    Full business intelligence breakdown for OnyxAlways.
+
+    Financial metrics (revenue, profit, margin) use COMPLETED orders only —
+    because an open order hasn't generated real revenue yet.
+    Job creation counts include all statuses to show pipeline activity.
+
+    Three sections:
+      by_item_type  — which items to market more (sorted by total profit)
+      monthly       — month-by-month pipeline and revenue view
+      kpi           — headline numbers + three marketing intelligence signals
+    """
+    all_orders = db.query(Order).all()
+    completed  = [o for o in all_orders if o.status == OrderStatus.COMPLETE]
+
+    def _profit(o: Order) -> Decimal:
+        return (
+            (o.sale_price     or Decimal("0"))
+            - (o.material_cost or Decimal("0"))
+            - (o.labor_cost    or Decimal("0"))
+        )
+
+    # ── By Item Type ──────────────────────────────────────────────────────────
+    item_map: dict[str, dict] = defaultdict(lambda: {
+        "job_count":         0,
+        "total_revenue":     Decimal("0"),
+        "total_material":    Decimal("0"),
+        "total_profit":      Decimal("0"),
+    })
+    for o in completed:
+        d = item_map[o.item_type]
+        d["job_count"]      += 1
+        d["total_revenue"]  += o.sale_price     or Decimal("0")
+        d["total_material"] += o.material_cost  or Decimal("0")
+        d["total_profit"]   += _profit(o)
+
+    total_completed = len(completed)
+
+    by_item_type = []
+    for item_type, d in sorted(item_map.items(), key=lambda x: x[1]["total_profit"], reverse=True):
+        count   = d["job_count"]
+        revenue = d["total_revenue"]
+        profit  = d["total_profit"]
+
+        freq_pct  = round(count / total_completed * 100, 1) if total_completed else 0.0
+        margin    = (profit / revenue * 100).quantize(Decimal("0.1")) if revenue else Decimal("0")
+        avg_profit = (profit / count).quantize(Decimal("0.01"))       if count   else Decimal("0")
+
+        by_item_type.append({
+            "item_type":        item_type,
+            "job_count":        count,
+            "frequency_pct":    freq_pct,
+            "total_revenue":    str(revenue),
+            "total_material":   str(d["total_material"]),
+            "total_profit":     str(profit),
+            "avg_profit_per_job": str(avg_profit),
+            "margin_pct":       str(margin),
+        })
+
+    # ── Monthly Breakdown ─────────────────────────────────────────────────────
+    month_created:   dict[tuple, int]  = defaultdict(int)
+    month_completed_data: dict[tuple, dict] = defaultdict(lambda: {
+        "jobs_completed": 0,
+        "revenue":        Decimal("0"),
+        "material":       Decimal("0"),
+        "profit":         Decimal("0"),
+    })
+
+    for o in all_orders:
+        month_created[(o.created_at.year, o.created_at.month)] += 1
+
+    for o in completed:
+        if o.completed_at:
+            key = (o.completed_at.year, o.completed_at.month)
+            dc = month_completed_data[key]
+            dc["jobs_completed"] += 1
+            dc["revenue"]   += o.sale_price    or Decimal("0")
+            dc["material"]  += o.material_cost or Decimal("0")
+            dc["profit"]    += _profit(o)
+
+    month_names = ["Jan","Feb","Mar","Apr","May","Jun",
+                   "Jul","Aug","Sep","Oct","Nov","Dec"]
+    all_keys = set(month_created) | set(month_completed_data)
+
+    monthly = []
+    for (year, month) in sorted(all_keys, reverse=True):
+        dc      = month_completed_data[(year, month)]
+        revenue = dc["revenue"]
+        profit  = dc["profit"]
+        margin  = (profit / revenue * 100).quantize(Decimal("0.1")) if revenue else Decimal("0")
+
+        monthly.append({
+            "month_label":    f"{month_names[month - 1]} {year}",
+            "year":           year,
+            "month":          month,
+            "jobs_created":   month_created[(year, month)],
+            "jobs_completed": dc["jobs_completed"],
+            "revenue":        str(revenue),
+            "material":       str(dc["material"]),
+            "profit":         str(profit),
+            "margin_pct":     str(margin),
+        })
+
+    # ── KPI Summary ───────────────────────────────────────────────────────────
+    if completed:
+        total_revenue = sum((o.sale_price or Decimal("0") for o in completed), Decimal("0"))
+        total_profit  = sum((_profit(o)                   for o in completed), Decimal("0"))
+        overall_margin = (
+            (total_profit / total_revenue * 100).quantize(Decimal("0.1"))
+            if total_revenue else Decimal("0")
+        )
+        avg_revenue = (total_revenue / len(completed)).quantize(Decimal("0.01"))
+        avg_profit  = (total_profit  / len(completed)).quantize(Decimal("0.01"))
+
+        # Marketing signals — only meaningful when there are multiple item types
+        best_margin   = max(by_item_type, key=lambda x: float(x["margin_pct"]))    if by_item_type else None
+        most_frequent = max(by_item_type, key=lambda x: x["job_count"])             if by_item_type else None
+        top_profit    = by_item_type[0]                                              if by_item_type else None
+    else:
+        total_revenue = total_profit = overall_margin = avg_revenue = avg_profit = Decimal("0")
+        best_margin = most_frequent = top_profit = None
+
+    kpi = {
+        "total_all_orders":        len(all_orders),
+        "total_completed_orders":  total_completed,
+        "total_revenue":           str(total_revenue),
+        "total_profit":            str(total_profit),
+        "avg_revenue_per_order":   str(avg_revenue),
+        "avg_profit_per_order":    str(avg_profit),
+        "overall_margin_pct":      str(overall_margin),
+        "best_margin_item":        best_margin["item_type"]  if best_margin   else None,
+        "best_margin_pct":         best_margin["margin_pct"] if best_margin   else None,
+        "most_frequent_item":      most_frequent["item_type"]   if most_frequent else None,
+        "most_frequent_count":     most_frequent["job_count"]   if most_frequent else None,
+        "top_profit_contributor":  top_profit["item_type"]   if top_profit    else None,
+        "top_profit_total":        top_profit["total_profit"] if top_profit    else None,
+    }
+
+    return {"by_item_type": by_item_type, "monthly": monthly, "kpi": kpi}
+
+
+@app.get("/api/export")
+def export_csv(db: Session = Depends(get_db)):
+    """
+    Download all completed orders as a CSV file.
+
+    Ready to open in Excel for ad-hoc analysis (pivot tables, custom charts).
+    All financial figures are pre-calculated so no Excel formulas are needed.
+    Use this instead of maintaining a parallel spreadsheet — the app is the
+    source of truth; Excel is for one-off deep dives from clean exported data.
+    """
+    completed = (
+        db.query(Order)
+        .filter(Order.status == OrderStatus.COMPLETE)
+        .order_by(Order.completed_at.desc())
+        .all()
+    )
+
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+
+    writer.writerow([
+        "Order ID", "Client Name", "Description", "Item Type", "Quantity",
+        "Material Cost ($)", "Sale Price ($)", "Profit ($)", "Margin %",
+        "Created Date", "Completed Date",
+    ])
+
+    for o in completed:
+        revenue = o.sale_price    or Decimal("0")
+        profit  = revenue - (o.material_cost or Decimal("0")) - (o.labor_cost or Decimal("0"))
+        margin  = (profit / revenue * 100).quantize(Decimal("0.1")) if revenue else Decimal("0")
+
+        writer.writerow([
+            f"OA-{str(o.id).zfill(4)}",
+            o.client_name,
+            o.description,
+            o.item_type,
+            o.quantity,
+            f"{o.material_cost or 0:.2f}",
+            f"{revenue:.2f}",
+            f"{profit:.2f}",
+            f"{margin}%",
+            o.created_at.strftime("%Y-%m-%d"),
+            o.completed_at.strftime("%Y-%m-%d") if o.completed_at else "",
+        ])
+
+    buf.seek(0)
+    filename = f"onyxalways-{datetime.now().strftime('%Y%m%d')}.csv"
+
+    return StreamingResponse(
+        iter([buf.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
 # Serving the frontend from the same FastAPI process keeps deployment to
 # ONE container / ONE process. No separate web server, no CORS issues.
 STATIC_DIR = Path(__file__).parent / "static"
