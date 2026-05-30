@@ -1,0 +1,63 @@
+name: Tests
+
+# Triggers:
+# - Push to main or master (direct commit or merged PR)
+# - Pull request targeting main or master (catches bugs before merge)
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+    branches: ["main", "master"]
+
+jobs:
+  test:
+    name: End-to-end API tests
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1) Checkout the code at the commit that triggered the workflow.
+      #    Without this, the runner has no files to work with.
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2) Install a specific Python version.
+      #    Pinning to 3.12 matches your dev environment; avoids surprise
+      #    failures if GitHub changes the default Python in future runners.
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # 3) Cache pip's download directory between runs.
+      #    The cache key is the OS + a hash of requirements.txt.
+      #    When requirements.txt changes, the cache is invalidated and
+      #    packages re-downloaded — otherwise the cache is reused, saving
+      #    30-60 seconds per run.
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      # 4) Install the app's dependencies plus httpx.
+      #    httpx is FastAPI TestClient's transport layer — not in
+      #    requirements.txt because production doesn't need it,
+      #    but the test suite does.
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install httpx
+
+      # 5) Run the end-to-end test suite.
+      #    DATABASE_URL is set to SQLite so no external database is needed
+      #    in CI. The test file creates a fresh DB, runs 15 assertions, and
+      #    deletes the DB file when done — completely self-contained.
+      #    If any assertion fails, the step exits non-zero and the GitHub
+      #    check turns red, blocking the PR from merging.
+      - name: Run end-to-end tests
+        env:
+          DATABASE_URL: sqlite:///./test_ci.db
+        run: python test_e2e.py

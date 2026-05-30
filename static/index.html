@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0A0A0B" />
+  <title>OnyxAlways — Order Workshop</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+          href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+          rel="stylesheet"
+  />
+  <style>
+    /* ============================================================
+       Design tokens
+       Why CSS variables: one place to retune the whole aesthetic,
+       and it's how a dark theme stays consistent across components.
+       ============================================================ */
+    :root {
+      --bg:               #0A0A0B;
+      --surface:          #141416;
+      --surface-elevated: #1C1C1F;
+      --surface-hover:    #232327;
+      --border:           #2A2A2E;
+      --border-strong:    #3A3A40;
+
+      --text:        #F5F1EA;
+      --text-muted:  #8B8680;
+      --text-dim:    #5A5650;
+
+      --accent:        #D4A574;  /* Warm amber — onyx gold */
+      --accent-hover:  #E5BB85;
+      --accent-dim:    rgba(212, 165, 116, 0.12);
+
+      --success: #7DA87A;
+      --danger:  #C46B5C;
+      --warning: #D9B656;
+
+      --shadow-card: 0 1px 2px rgba(0,0,0,0.4), 0 4px 12px rgba(0,0,0,0.3);
+      --shadow-modal: 0 20px 60px rgba(0,0,0,0.6);
+
+      --radius-sm: 4px;
+      --radius:    8px;
+      --radius-lg: 14px;
+
+      --col-new:        #6B7280;
+      --col-design:     #B59465;
+      --col-production: #D4A574;
+      --col-complete:   #7DA87A;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body { height: 100%; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Manrope', system-ui, sans-serif;
+      font-weight: 400;
+      font-size: 15px;
+      line-height: 1.5;
+      letter-spacing: -0.005em;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* Subtle grain texture in the background — adds depth without distracting */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image: radial-gradient(circle at 20% 0%, rgba(212, 165, 116, 0.04), transparent 50%),
+                        radial-gradient(circle at 80% 100%, rgba(212, 165, 116, 0.02), transparent 50%);
+      z-index: 0;
+    }
+
+    .app { position: relative; z-index: 1; }
+
+    /* ============================================================
+       Header — brand mark + summary stats
+       ============================================================ */
+    header {
+      padding: 32px 24px 24px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(212, 165, 116, 0.04), transparent);
+    }
+    .brand-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .brand {
+      font-family: 'Instrument Serif', serif;
+      font-size: 38px;
+      line-height: 1;
+      letter-spacing: -0.02em;
+    }
+    .brand .always {
+      font-style: italic;
+      color: var(--accent);
+    }
+    .brand-sub {
+      display: block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      margin-top: 6px;
+    }
+
+    .add-btn {
+      background: var(--accent);
+      color: var(--bg);
+      border: none;
+      padding: 12px 22px;
+      font-family: 'Manrope', sans-serif;
+      font-weight: 600;
+      font-size: 14px;
+      letter-spacing: 0.01em;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all 0.18s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .add-btn:hover { background: var(--accent-hover); transform: translateY(-1px); }
+    .add-btn:active { transform: translateY(0); }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+    .stat {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+    }
+    .stat-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .stat-value {
+      font-family: 'Instrument Serif', serif;
+      font-size: 28px;
+      line-height: 1;
+      letter-spacing: -0.01em;
+    }
+    .stat-value.money { font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 500; }
+    .stat-value.good { color: var(--success); }
+    .stat-value.warn { color: var(--accent); }
+
+    /* ============================================================
+       Mobile tabs (hidden on desktop)
+       ============================================================ */
+    .col-tabs {
+      display: none;
+      padding: 12px 16px 0;
+      gap: 6px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .col-tabs::-webkit-scrollbar { display: none; }
+    .col-tab {
+      flex-shrink: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .col-tab.active {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .col-tab .count {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      margin-left: 6px;
+      opacity: 0.7;
+    }
+
+    /* ============================================================
+       Kanban board
+       ============================================================ */
+    .board {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      padding: 24px;
+      min-height: calc(100vh - 280px);
+    }
+    .column {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .col-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 4px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .col-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+    .col-count {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--text-dim);
+      background: var(--surface-elevated);
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+
+    /* Color-coded column accents */
+    .column[data-status="NEW_ORDER"]          .col-title { color: var(--col-new); }
+    .column[data-status="DESIGNING_APPROVAL"] .col-title { color: var(--col-design); }
+    .column[data-status="PRODUCTION"]         .col-title { color: var(--col-production); }
+    .column[data-status="COMPLETE"]           .col-title { color: var(--col-complete); }
+
+    .cards { display: flex; flex-direction: column; gap: 10px; flex: 1; }
+
+    .card {
+      background: var(--surface-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      cursor: default;
+      transition: all 0.15s ease;
+      box-shadow: var(--shadow-card);
+      position: relative;
+    }
+    .card:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+
+    /* Subtle left accent stripe per status */
+    .card::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 14px; bottom: 14px;
+      width: 2px;
+      border-radius: 2px;
+      background: var(--accent);
+      opacity: 0.5;
+    }
+    .column[data-status="NEW_ORDER"]          .card::before { background: var(--col-new); }
+    .column[data-status="DESIGNING_APPROVAL"] .card::before { background: var(--col-design); }
+    .column[data-status="PRODUCTION"]         .card::before { background: var(--col-production); }
+    .column[data-status="COMPLETE"]           .card::before { background: var(--col-complete); opacity: 0.8; }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 4px;
+    }
+    .card-id {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+    }
+    .card-item {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--accent);
+      background: var(--accent-dim);
+      padding: 2px 7px;
+      border-radius: 3px;
+      letter-spacing: 0.05em;
+    }
+    .card-client {
+      font-family: 'Instrument Serif', serif;
+      font-size: 19px;
+      line-height: 1.15;
+      letter-spacing: -0.01em;
+      margin: 4px 0 8px;
+    }
+    .card-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+    .card-money {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      padding: 10px 0;
+      border-top: 1px dashed var(--border);
+      border-bottom: 1px dashed var(--border);
+      margin-bottom: 10px;
+    }
+    .money-cell { text-align: left; }
+    .money-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+    .money-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .money-value.profit-pos { color: var(--success); }
+    .money-value.profit-neg { color: var(--danger); }
+
+    .card-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+    .card-meta .due { font-family: 'JetBrains Mono', monospace; }
+    .card-meta .due.overdue { color: var(--danger); }
+    .card-meta .qty { font-family: 'JetBrains Mono', monospace; }
+
+    .card-actions {
+      display: flex;
+      gap: 4px;
+      justify-content: space-between;
+    }
+    .icon-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      width: 30px;
+      height: 30px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      transition: all 0.15s ease;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .icon-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+    .icon-btn.danger:hover { border-color: var(--danger); color: var(--danger); background: rgba(196,107,92,0.1); }
+    .icon-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .icon-btn:disabled:hover {
+      border-color: var(--border);
+      color: var(--text-muted);
+      background: transparent;
+    }
+
+    .empty-col {
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 12px;
+      font-style: italic;
+      padding: 24px 8px;
+      font-family: 'Instrument Serif', serif;
+    }
+
+    /* ============================================================
+       Modal
+       ============================================================ */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 10, 11, 0.85);
+      backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 20px;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      width: 100%;
+      max-width: 540px;
+      max-height: 92vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-modal);
+    }
+    .modal-title {
+      font-family: 'Instrument Serif', serif;
+      font-style: italic;
+      font-size: 28px;
+      margin-bottom: 4px;
+    }
+    .modal-sub {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      margin-bottom: 24px;
+    }
+
+    .field { margin-bottom: 16px; }
+    .field label {
+      display: block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .field input, .field textarea, .field select {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 12px;
+      font-family: 'Manrope', sans-serif;
+      font-size: 14px;
+      border-radius: var(--radius-sm);
+      transition: border-color 0.15s ease;
+    }
+    .field input:focus, .field textarea:focus, .field select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    .field textarea { resize: vertical; min-height: 70px; font-family: 'Manrope', sans-serif; }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .field-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+    }
+    .btn {
+      padding: 10px 20px;
+      border-radius: var(--radius-sm);
+      font-family: 'Manrope', sans-serif;
+      font-weight: 500;
+      font-size: 13px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.15s ease;
+    }
+    .btn-primary { background: var(--accent); color: var(--bg); }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-secondary { background: transparent; color: var(--text-muted); border-color: var(--border); }
+    .btn-secondary:hover { color: var(--text); border-color: var(--border-strong); }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--surface-elevated);
+      border: 1px solid var(--border-strong);
+      color: var(--text);
+      padding: 12px 20px;
+      border-radius: var(--radius);
+      font-size: 14px;
+      box-shadow: var(--shadow-modal);
+      opacity: 0;
+      transition: all 0.25s ease;
+      pointer-events: none;
+      z-index: 200;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.error { border-color: var(--danger); }
+
+    /* ============================================================
+       Responsive — mobile first feel
+       ============================================================ */
+    @media (max-width: 1024px) {
+      .board { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 720px) {
+      header { padding: 20px 16px 16px; }
+      .brand { font-size: 30px; }
+      .stats { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+      .stat { padding: 12px 14px; }
+      .stat-value { font-size: 22px; }
+      .stat-value.money { font-size: 18px; }
+
+      .col-tabs { display: flex; }
+
+      .board {
+        grid-template-columns: 1fr;
+        padding: 16px;
+        gap: 0;
+      }
+      /* On mobile: show only the active column at a time */
+      .column { display: none; }
+      .column.active { display: flex; }
+
+      .modal { padding: 22px; }
+      .modal-title { font-size: 24px; }
+      .field-row, .field-row-3 { grid-template-columns: 1fr; }
+    }
+
+    /* View tabs */
+    .view-tabs {
+      display: flex; gap: 2px; padding: 0 24px;
+      border-bottom: 1px solid var(--border);
+    }
+    .view-tab {
+      background: transparent; border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--text-muted);
+      padding: 14px 18px 13px;
+      font-family: 'Manrope', sans-serif; font-weight: 600; font-size: 13px;
+      cursor: pointer; transition: all 0.15s ease;
+      margin-bottom: -1px; display: inline-flex; align-items: center; gap: 7px;
+    }
+    .view-tab:hover { color: var(--text); }
+    .view-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* Weekly breakdown view */
+    .weekly-view { padding: 24px; display: none; }
+    .weekly-view.visible { display: block; }
+    .weekly-section-title {
+      font-family: 'Instrument Serif', serif; font-style: italic;
+      font-size: 24px; margin-bottom: 4px;
+    }
+    .weekly-dates-label {
+      font-family: 'JetBrains Mono', monospace; font-size: 10px;
+      letter-spacing: 0.18em; color: var(--text-dim);
+      text-transform: uppercase; margin-bottom: 18px;
+    }
+    .weekly-stats {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 12px; margin-bottom: 20px;
+    }
+    .weekly-pills-label {
+      font-family: 'JetBrains Mono', monospace; font-size: 10px;
+      letter-spacing: 0.15em; color: var(--text-dim);
+      text-transform: uppercase; margin-bottom: 8px;
+    }
+    .weekly-pills { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 36px; }
+    .item-pill {
+      background: var(--accent-dim); border: 1px solid rgba(212,165,116,0.25);
+      color: var(--accent); padding: 4px 12px; border-radius: 999px;
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    }
+    .history-label {
+      font-family: 'JetBrains Mono', monospace; font-size: 10px;
+      letter-spacing: 0.2em; text-transform: uppercase;
+      color: var(--text-dim); margin-bottom: 12px;
+    }
+    .weekly-table-wrap {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+    }
+    .weekly-table { width: 100%; border-collapse: collapse; }
+    .weekly-table th {
+      font-family: 'JetBrains Mono', monospace; font-size: 10px;
+      letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim);
+      padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border);
+      font-weight: 500;
+    }
+    .weekly-table th.r { text-align: right; }
+    .weekly-table td {
+      padding: 13px 16px; border-bottom: 1px solid var(--border);
+      font-size: 13px; vertical-align: middle;
+    }
+    .weekly-table tr:last-child td { border-bottom: none; }
+    .weekly-table tr.this-week td { background: var(--accent-dim); }
+    .weekly-table tr:not(.this-week):hover td { background: var(--surface-hover); }
+    .week-range { font-weight: 500; color: var(--text); }
+    .week-range small {
+      display: block; font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; color: var(--text-dim); margin-top: 2px; font-weight: 400;
+    }
+    .current-badge {
+      display: inline-block; background: var(--accent); color: var(--bg);
+      font-family: 'JetBrains Mono', monospace; font-size: 9px;
+      padding: 2px 7px; border-radius: 3px; vertical-align: middle;
+      margin-left: 8px; text-transform: uppercase;
+    }
+    .num-cell { font-family: 'JetBrains Mono', monospace; color: var(--text-muted); text-align: right; }
+    .money-cell { font-family: 'JetBrains Mono', monospace; text-align: right; }
+    .money-cell.pos { color: var(--success); }
+    .money-cell.neg { color: var(--danger); }
+    .trend { font-size: 10px; margin-left: 4px; }
+    .trend.up { color: var(--success); }
+    .trend.dn { color: var(--danger); }
+    .weekly-empty {
+      padding: 48px; text-align: center; color: var(--text-dim);
+      font-family: 'Instrument Serif', serif; font-style: italic; font-size: 18px;
+    }
+    @media (max-width: 720px) {
+      .weekly-stats { grid-template-columns: repeat(2, 1fr) !important; }
+      .weekly-table th:nth-child(3), .weekly-table td:nth-child(3) { display: none; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand-row">
+      <div>
+        <h1 class="brand">Onyx<span class="always">Always</span></h1>
+        <span class="brand-sub">Order Workshop · v1.0</span>
+      </div>
+      <button class="add-btn" onclick="openNewOrderModal()">
+        <span style="font-size: 16px; line-height: 1;">+</span>
+        <span>New Order</span>
+      </button>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-label">Active Orders</div>
+        <div class="stat-value money" id="stat-active">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Outstanding Revenue</div>
+        <div class="stat-value money warn" id="stat-outstanding">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">This Month Profit</div>
+        <div class="stat-value money good" id="stat-month-profit">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Lifetime Profit</div>
+        <div class="stat-value money good" id="stat-lifetime-profit">—</div>
+      </div>
+    </div>
+  </header>
+
+
+  <!-- View tabs: Board / Weekly -->
+  <div class="view-tabs">
+    <button class="view-tab active" id="tab-board" onclick="switchView('board')">&#9726; Board</button>
+    <button class="view-tab" id="tab-weekly" onclick="switchView('weekly')">&#9661; Weekly</button>
+  </div>
+
+  <!-- Weekly breakdown (hidden by default) -->
+  <div class="weekly-view" id="weekly-view"></div>
+
+  <!-- Mobile-only column selector tabs -->
+  <div class="col-tabs" id="col-tabs"></div>
+
+  <main class="board" id="board"></main>
+</div>
+
+<!-- Modal -->
+<div class="modal-backdrop" id="modal-backdrop" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">New Order</div>
+    <div class="modal-sub" id="modal-sub">Create</div>
+
+    <form id="order-form" onsubmit="submitOrder(event)">
+      <input type="hidden" id="f-id" />
+      <input type="hidden" id="f-status" />
+
+      <div class="field">
+        <label for="f-client">Client name</label>
+        <input type="text" id="f-client" required maxlength="120" placeholder="e.g. Marcus T." />
+      </div>
+
+      <div class="field">
+        <label for="f-description">Order description</label>
+        <textarea id="f-description" required placeholder="e.g. 25 black tees, gold chest logo, sizes M-XXL"></textarea>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="f-item">Item type</label>
+          <select id="f-item">
+            <option value="T-Shirt">T-Shirt</option>
+            <option value="Hoodie">Hoodie</option>
+            <option value="Door">Door</option>
+            <option value="Sign">Sign</option>
+            <option value="Mug">Mug</option>
+            <option value="Tote">Tote</option>
+            <option value="Sticker">Sticker</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="f-qty">Quantity</label>
+          <input type="number" id="f-qty" min="1" value="1" required />
+        </div>
+      </div>
+
+      <div class="field-row-3">
+        <div class="field">
+          <label for="f-material">Material cost ($)</label>
+          <input type="number" id="f-material" min="0" step="0.01" value="0" />
+        </div>
+        <div class="field">
+          <label for="f-labor">Labor cost ($)</label>
+          <input type="number" id="f-labor" min="0" step="0.01" value="0" />
+        </div>
+        <div class="field">
+          <label for="f-price">Sale price ($)</label>
+          <input type="number" id="f-price" min="0" step="0.01" value="0" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="f-due">Due date (optional)</label>
+        <input type="date" id="f-due" />
+      </div>
+
+      <div class="field">
+        <label for="f-notes">Notes (optional)</label>
+        <textarea id="f-notes" placeholder="Anything else you want to remember"></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="delete-btn" onclick="deleteCurrentOrder()" style="display:none; margin-right:auto;">Delete</button>
+        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="submit-btn">Save Order</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  /* ============================================================
+     OnyxAlways frontend — vanilla JS, no framework
+     Reasoning: <500 lines of JS, no build step needed, loads
+     instantly on phone, easier for non-frontend devs to read.
+     ============================================================ */
+
+  const API = '/api';
+
+  const COLUMNS = [
+    { key: 'NEW_ORDER',          title: 'New Order' },
+    { key: 'DESIGNING_APPROVAL', title: 'Design / Approval' },
+    { key: 'PRODUCTION',         title: 'Production' },
+    { key: 'COMPLETE',           title: 'Complete' },
+  ];
+
+  let allOrders = [];
+  let activeMobileColumn = 'NEW_ORDER';
+  let editingOrderId = null;
+
+  // ---------- API helpers ----------
+  async function api(path, options = {}) {
+    const res = await fetch(`${API}${path}`, {
+      headers: { 'Content-Type': 'application/json' },
+      ...options,
+    });
+    if (!res.ok) {
+      let msg = `HTTP ${res.status}`;
+      try { const data = await res.json(); msg = data.detail || msg; } catch {}
+      throw new Error(msg);
+    }
+    if (res.status === 204) return null;
+    return res.json();
+  }
+
+  // ---------- Toast ----------
+  function toast(msg, isError = false) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = `toast show${isError ? ' error' : ''}`;
+    setTimeout(() => el.className = 'toast', 2400);
+  }
+
+  // ---------- Formatting ----------
+  function money(v) {
+    const n = Number(v || 0);
+    return `$${n.toFixed(2)}`;
+  }
+  function fmtDate(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+  function isOverdue(iso, status) {
+    if (!iso || status === 'COMPLETE') return false;
+    return new Date(iso) < new Date(new Date().toDateString());
+  }
+  function orderIdStr(id) {
+    return `OA-${String(id).padStart(4, '0')}`;
+  }
+
+  // ---------- Render ----------
+  function renderBoard() {
+    const board = document.getElementById('board');
+    const tabs = document.getElementById('col-tabs');
+    board.innerHTML = '';
+    tabs.innerHTML = '';
+
+    COLUMNS.forEach(col => {
+      const orders = allOrders.filter(o => o.status === col.key);
+
+      // Mobile tab
+      const tab = document.createElement('button');
+      tab.className = `col-tab${activeMobileColumn === col.key ? ' active' : ''}`;
+      tab.innerHTML = `${col.title}<span class="count">${orders.length}</span>`;
+      tab.onclick = () => { activeMobileColumn = col.key; renderBoard(); };
+      tabs.appendChild(tab);
+
+      // Column
+      const colEl = document.createElement('div');
+      colEl.className = `column${activeMobileColumn === col.key ? ' active' : ''}`;
+      colEl.dataset.status = col.key;
+
+      colEl.innerHTML = `
+        <div class="col-header">
+          <div class="col-title">${col.title}</div>
+          <div class="col-count">${orders.length}</div>
+        </div>
+        <div class="cards" id="cards-${col.key}"></div>
+      `;
+      board.appendChild(colEl);
+
+      const cardsEl = colEl.querySelector('.cards');
+      if (orders.length === 0) {
+        cardsEl.innerHTML = `<div class="empty-col">No orders here</div>`;
+      } else {
+        orders.forEach(o => cardsEl.appendChild(renderCard(o)));
+      }
+    });
+  }
+
+  function renderCard(o) {
+    const card = document.createElement('div');
+    card.className = 'card';
+
+    const profit = Number(o.profit || 0);
+    const profitClass = profit >= 0 ? 'profit-pos' : 'profit-neg';
+    const overdueClass = isOverdue(o.due_date, o.status) ? ' overdue' : '';
+
+    const colIndex = COLUMNS.findIndex(c => c.key === o.status);
+    const canRegress = colIndex > 0;
+    const canAdvance = colIndex < COLUMNS.length - 1;
+
+    card.innerHTML = `
+      <div class="card-top">
+        <span class="card-id">${orderIdStr(o.id)}</span>
+        <span class="card-item">${o.item_type}</span>
+      </div>
+      <h3 class="card-client">${escapeHtml(o.client_name)}</h3>
+      <p class="card-desc">${escapeHtml(o.description)}</p>
+      <div class="card-money">
+        <div class="money-cell">
+          <div class="money-label">Cost</div>
+          <div class="money-value">${money(o.total_cost)}</div>
+        </div>
+        <div class="money-cell">
+          <div class="money-label">Price</div>
+          <div class="money-value">${money(o.sale_price)}</div>
+        </div>
+        <div class="money-cell">
+          <div class="money-label">Profit</div>
+          <div class="money-value ${profitClass}">${money(profit)}</div>
+        </div>
+      </div>
+      <div class="card-meta">
+        <span class="qty">Qty: ${o.quantity}</span>
+        ${o.due_date ? `<span class="due${overdueClass}">Due ${fmtDate(o.due_date)}</span>` : '<span></span>'}
+      </div>
+      <div class="card-actions">
+        <button class="icon-btn" title="Move back" ${canRegress ? '' : 'disabled'} data-action="regress">&larr;</button>
+        <button class="icon-btn" title="Edit"  data-action="edit">&#9998;</button>
+        <button class="icon-btn" title="Move forward" ${canAdvance ? '' : 'disabled'} data-action="advance">&rarr;</button>
+      </div>
+    `;
+
+    card.querySelectorAll('.icon-btn').forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const action = btn.dataset.action;
+        if (action === 'advance') advanceOrder(o.id);
+        else if (action === 'regress') regressOrder(o.id);
+        else if (action === 'edit') openEditModal(o);
+      };
+    });
+
+    return card;
+  }
+
+  function escapeHtml(s) {
+    if (!s) return '';
+    return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function renderStats(s) {
+    document.getElementById('stat-active').textContent = s.active_orders;
+    document.getElementById('stat-outstanding').textContent = money(s.outstanding_revenue);
+    document.getElementById('stat-month-profit').textContent = money(s.month_profit);
+    document.getElementById('stat-lifetime-profit').textContent = money(s.lifetime_profit);
+  }
+
+  // ---------- Data loading ----------
+  async function refresh() {
+    try {
+      const [orders, summary] = await Promise.all([
+        api('/orders'),
+        api('/summary'),
+      ]);
+      allOrders = orders;
+      renderBoard();
+      renderStats(summary);
+    } catch (err) {
+      toast(`Couldn't load: ${err.message}`, true);
+    }
+  }
+
+  // ---------- Actions ----------
+  async function advanceOrder(id) {
+    try {
+      await api(`/orders/${id}/advance`, { method: 'POST' });
+      toast('Moved forward');
+      refresh();
+    } catch (err) { toast(err.message, true); }
+  }
+
+  async function regressOrder(id) {
+    try {
+      await api(`/orders/${id}/regress`, { method: 'POST' });
+      toast('Moved back');
+      refresh();
+    } catch (err) { toast(err.message, true); }
+  }
+
+  async function deleteCurrentOrder() {
+    if (!editingOrderId) return;
+    if (!confirm('Delete this order permanently? This cannot be undone.')) return;
+    try {
+      await api(`/orders/${editingOrderId}`, { method: 'DELETE' });
+      toast('Order deleted');
+      closeModal();
+      refresh();
+    } catch (err) { toast(err.message, true); }
+  }
+
+  // ---------- Modal ----------
+  function openNewOrderModal() {
+    editingOrderId = null;
+    document.getElementById('modal-title').textContent = 'New Order';
+    document.getElementById('modal-sub').textContent = 'Create';
+    document.getElementById('submit-btn').textContent = 'Save Order';
+    document.getElementById('delete-btn').style.display = 'none';
+
+    document.getElementById('f-id').value = '';
+    document.getElementById('f-status').value = '';
+    document.getElementById('f-client').value = '';
+    document.getElementById('f-description').value = '';
+    document.getElementById('f-item').value = 'T-Shirt';
+    document.getElementById('f-qty').value = 1;
+    document.getElementById('f-material').value = 0;
+    document.getElementById('f-labor').value = 0;
+    document.getElementById('f-price').value = 0;
+    document.getElementById('f-due').value = '';
+    document.getElementById('f-notes').value = '';
+
+    document.getElementById('modal-backdrop').classList.add('open');
+  }
+
+  function openEditModal(o) {
+    editingOrderId = o.id;
+    document.getElementById('modal-title').textContent = 'Edit Order';
+    document.getElementById('modal-sub').textContent = orderIdStr(o.id);
+    document.getElementById('submit-btn').textContent = 'Save Changes';
+    document.getElementById('delete-btn').style.display = 'inline-block';
+
+    document.getElementById('f-id').value = o.id;
+    document.getElementById('f-status').value = o.status;
+    document.getElementById('f-client').value = o.client_name;
+    document.getElementById('f-description').value = o.description;
+    document.getElementById('f-item').value = o.item_type;
+    document.getElementById('f-qty').value = o.quantity;
+    document.getElementById('f-material').value = o.material_cost;
+    document.getElementById('f-labor').value = o.labor_cost;
+    document.getElementById('f-price').value = o.sale_price;
+    document.getElementById('f-due').value = o.due_date || '';
+    document.getElementById('f-notes').value = o.notes || '';
+
+    document.getElementById('modal-backdrop').classList.add('open');
+  }
+
+  function closeModal() {
+    document.getElementById('modal-backdrop').classList.remove('open');
+  }
+
+  async function submitOrder(e) {
+    e.preventDefault();
+    const payload = {
+      client_name: document.getElementById('f-client').value.trim(),
+      description: document.getElementById('f-description').value.trim(),
+      item_type: document.getElementById('f-item').value,
+      quantity: parseInt(document.getElementById('f-qty').value, 10),
+      material_cost: parseFloat(document.getElementById('f-material').value) || 0,
+      labor_cost: parseFloat(document.getElementById('f-labor').value) || 0,
+      sale_price: parseFloat(document.getElementById('f-price').value) || 0,
+      due_date: document.getElementById('f-due').value || null,
+      notes: document.getElementById('f-notes').value.trim() || null,
+    };
+
+    try {
+      if (editingOrderId) {
+        await api(`/orders/${editingOrderId}`, {
+          method: 'PATCH',
+          body: JSON.stringify(payload),
+        });
+        toast('Order updated');
+      } else {
+        await api('/orders', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        });
+        toast('Order created');
+      }
+      closeModal();
+      refresh();
+    } catch (err) {
+      toast(err.message, true);
+    }
+  }
+
+
+  // ============================================================
+  // View switching — Board / Weekly
+  // ============================================================
+  let currentView = 'board';
+
+  function switchView(view) {
+    currentView = view;
+    const board    = document.getElementById('board');
+    const colTabs  = document.getElementById('col-tabs');
+    const weekly   = document.getElementById('weekly-view');
+    const tabBoard  = document.getElementById('tab-board');
+    const tabWeekly = document.getElementById('tab-weekly');
+
+    if (view === 'board') {
+      board.style.display   = '';
+      colTabs.style.display = '';
+      weekly.classList.remove('visible');
+      tabBoard.classList.add('active');
+      tabWeekly.classList.remove('active');
+    } else {
+      board.style.display   = 'none';
+      colTabs.style.display = 'none';
+      weekly.classList.add('visible');
+      tabBoard.classList.remove('active');
+      tabWeekly.classList.add('active');
+      renderWeekly();
+    }
+  }
+
+  // ============================================================
+  // Weekly breakdown renderer
+  // ============================================================
+  function fmtWeekRange(start, end) {
+    const s = new Date(start + 'T00:00:00');
+    const e = new Date(end   + 'T00:00:00');
+    const opts = { month: 'short', day: 'numeric' };
+    return s.toLocaleDateString('en-US', opts) + ' \u2013 ' + e.toLocaleDateString('en-US', opts);
+  }
+
+  function trendTag(curr, prev) {
+    if (prev == null || Number(prev) === 0) return '';
+    const pct = ((Number(curr) - Number(prev)) / Number(prev) * 100).toFixed(0);
+    if (pct > 0)  return `<span class="trend up">&#8593;${pct}%</span>`;
+    if (pct < 0)  return `<span class="trend dn">&#8595;${Math.abs(pct)}%</span>`;
+    return '';
+  }
+
+  async function renderWeekly() {
+    const el = document.getElementById('weekly-view');
+    el.innerHTML = '<div class="weekly-empty">Loading&hellip;</div>';
+
+    let weeks;
+    try {
+      weeks = await api('/weekly');
+    } catch (err) {
+      el.innerHTML = `<div class="weekly-empty" style="color:var(--danger)">Could not load: ${err.message}</div>`;
+      return;
+    }
+
+    if (!weeks.length) {
+      el.innerHTML = '<div class="weekly-empty">No data yet &mdash; create some orders first.</div>';
+      return;
+    }
+
+    const cur  = weeks[0];
+    const prev = weeks[1] || null;
+
+    // Item pills for current week
+    const entries = Object.entries(cur.item_breakdown || {});
+    const pillsHtml = entries.length
+      ? entries.map(([t, n]) => `<span class="item-pill">${t} &times; ${n}</span>`).join('')
+      : `<span style="color:var(--text-dim);font-size:13px;font-style:italic">No new orders this week</span>`;
+
+    // Table rows — all 8 weeks
+    const rows = weeks.map((w, i) => {
+      const p = weeks[i + 1] || null;
+      const profitCls = Number(w.profit) >= 0 ? 'pos' : 'neg';
+      return `
+        <tr class="${i === 0 ? 'this-week' : ''}">
+          <td>
+            <span class="week-range">
+              ${fmtWeekRange(w.week_start, w.week_end)}
+              ${i === 0 ? '<span class="current-badge">Now</span>' : ''}
+              <small>${w.week_start}</small>
+            </span>
+          </td>
+          <td class="num-cell">${w.new_orders}</td>
+          <td class="num-cell">${w.completed_orders}</td>
+          <td class="money-cell">${money(w.revenue)}${i === 0 && p ? trendTag(w.revenue, p.revenue) : ''}</td>
+          <td class="money-cell ${profitCls}">${money(w.profit)}${i === 0 && p ? trendTag(w.profit, p.profit) : ''}</td>
+        </tr>`;
+    }).join('');
+
+    el.innerHTML = `
+      <div class="weekly-section-title">This Week</div>
+      <div class="weekly-dates-label">${fmtWeekRange(cur.week_start, cur.week_end)}</div>
+      <div class="weekly-stats">
+        <div class="stat">
+          <div class="stat-label">New Orders</div>
+          <div class="stat-value money">${cur.new_orders}${prev ? trendTag(cur.new_orders, prev.new_orders) : ''}</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Completed</div>
+          <div class="stat-value money">${cur.completed_orders}${prev ? trendTag(cur.completed_orders, prev.completed_orders) : ''}</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Revenue</div>
+          <div class="stat-value money warn">${money(cur.revenue)}${prev ? trendTag(cur.revenue, prev.revenue) : ''}</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Profit</div>
+          <div class="stat-value money good">${money(cur.profit)}${prev ? trendTag(cur.profit, prev.profit) : ''}</div>
+        </div>
+      </div>
+      ${entries.length ? `
+        <div class="weekly-pills-label">Items this week</div>
+        <div class="weekly-pills">${pillsHtml}</div>
+      ` : ''}
+
+      <div class="history-label">Last 8 Weeks</div>
+      <div class="weekly-table-wrap">
+        <table class="weekly-table">
+          <thead>
+            <tr>
+              <th>Week</th>
+              <th class="r">New</th>
+              <th class="r">Done</th>
+              <th class="r">Revenue</th>
+              <th class="r">Profit</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  // Keyboard: Esc to close modal
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeModal();
+  });
+
+  // Auto-refresh every 30s — keeps multiple devices roughly in sync
+  setInterval(refresh, 30000);
+
+  // Initial load
+  refresh();
+</script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.venv/
+venv/
+env/
+
+# Local database files — never commit these
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Local environment — never commit secrets
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+.DS_Store

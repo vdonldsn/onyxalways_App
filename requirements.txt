@@ -1,0 +1,15 @@
+# Web framework + ASGI server
+fastapi==0.115.4
+uvicorn[standard]==0.32.0
+
+# Data layer
+sqlalchemy==2.0.36
+pydantic==2.9.2
+
+# Database drivers
+# psycopg2-binary is the Postgres driver — needed for Supabase or any Postgres.
+# SQLite driver is built into Python so no entry needed for local dev.
+psycopg2-binary==2.9.10
+
+# python-dotenv loads .env files for local development
+python-dotenv==1.0.1
